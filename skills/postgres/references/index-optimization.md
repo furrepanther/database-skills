@@ -29,20 +29,7 @@ SELECT
  ORDER BY pg_relation_size(s.indexrelid) DESC;
 ```
 
-## Indexes Per Table Guidelines
-
-- **< 5**: Normal
-- **5-10**: Monitor (Verify necessity)
-- **> 10**: Audit required (High write overhead)
-
-```sql
-SELECT relname AS table, count(*) as index_count
-FROM pg_stat_user_indexes
-GROUP BY relname
-ORDER BY count(*) DESC;
-```
-
-## Identify Unused Indexes
+## Identify Duplicate Indexes
 
 Indexes with identical definitions (after normalizing names) on the same table are duplicates:
 
@@ -58,6 +45,16 @@ GROUP BY schemaname, tablename,
 HAVING count(*) > 1;
 ```
 
+## Identify Invalid Indexes
+
+Failed `CREATE INDEX CONCURRENTLY` builds leave INVALID indexes maintained on every write but never used for reads.
+`CREATE INDEX CONCURRENTLY IF NOT EXISTS` silently succeeds if an invalid index already exists — always check and drop before retrying.
+
+```sql
+SELECT indexrelname FROM pg_stat_user_indexes s
+JOIN pg_index i ON s.indexrelid = i.indexrelid WHERE NOT i.indisvalid;
+```
+
 **Always confirm with a human before dropping or removing any indexes identified by the queries above.** Even indexes with 0 scans may be needed for infrequent but critical queries, and stats may have been reset recently.
 
 ## Per-table Index Count Guidelines
@@ -67,3 +64,37 @@ HAVING count(*) > 1;
 | <5          | Normal                                      |
 | 5-10        | Review for unused/duplicates                |
 | >10         | Audit required - significant write overhead |
+
+```sql
+SELECT relname AS table, count(*) as index_count
+FROM pg_stat_user_indexes
+GROUP BY relname
+ORDER BY count(*) DESC;
+```
+
+## Index Bloat Detection
+
+VACUUM removes dead tuples but does **not** reclaim empty index page space — only `REINDEX` or `pg_repack` compacts pages.
+Detect with pgstattuple (`CREATE EXTENSION IF NOT EXISTS pgstattuple`): `SELECT avg_leaf_density FROM pgstatindex('my_index')` — below 70% = significant bloat, healthy = 80-90%+. Remediation: `REINDEX CONCURRENTLY` (PG 12+) for index-only bloat; `pg_repack` for table+index (requires PK and ~2x disk space).
+
+## HOT Update Monitoring
+
+HOT updates skip all index maintenance when no indexed column value changes and free space exists on the same heap page. Target >90% on frequently updated tables.
+
+```sql
+SELECT relname, round(100.0 * n_tup_hot_upd / nullif(n_tup_upd, 0), 1) AS hot_pct
+FROM pg_stat_user_tables WHERE n_tup_upd > 0 ORDER BY n_tup_upd DESC;
+```
+
+**Key levers:** set `fillfactor = 70-80` on write-heavy tables, never index frequently-updated columns (`status`, `updated_at`) unless query-critical, use partial indexes to reduce scope. PG 16+: BRIN indexes excluded from HOT eligibility checks.
+
+## Write Amplification
+
+Each index adds linear overhead to every write. Percona PG 17 benchmarks: 7→39 indexes = **58% throughput drop**. Mitigate with `wal_compression = 'lz4'` (PG 15+) and larger `max_wal_size` (10-100+ GB).
+
+## Planner Tuning
+
+- **SSD storage:** `random_page_cost = 1.1` (default 4.0 assumes spinning disk)
+- **effective_cache_size:** ~75% of total RAM
+- **Correlated columns:** `CREATE STATISTICS (dependencies, ndistinct, mcv)` then ANALYZE
+- **Skewed distributions:** `ALTER TABLE ... ALTER COLUMN ... SET STATISTICS 500-1000`
