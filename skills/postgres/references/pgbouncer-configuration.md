@@ -8,40 +8,37 @@ tags: postgres, pgbouncer, connection-pooling, configuration
 
 ## default_pool_size
 
-Server connections allowed **per database/user pair**.
+Server connections per user/database pair. **Default: 20**
 
-**Multiplication:** 2 roles × 3 databases = `6 × default_pool_size` connections  
-**Example:** `default_pool_size=45` with 2 roles and 3 databases = 270 backend connections
+**Multiplication:** 2 users × 3 databases = `6 × default_pool_size` connections  
+**Example:** 45 with 2 users and 3 databases = 270 backend connections
 
 **Values:** OLTP: `20-50`, High concurrency: `50-100`, Memory-intensive: `10-20`
 
 ## max_user_connections
 
-**Maximum total connections across all databases and roles.** Acts as global ceiling.
+Max backend connections per user across all databases. Set in `[users]` section. **Default: 0 (unlimited)**
 
-Set to `max_connections × 0.7 to 0.85` to leave headroom for direct connections and emergency access.
+**Recommended:** `0.7-0.85 × Postgres max_connections` to leave headroom for direct access.
 
-**Default:** `0` (unlimited) — dangerous with multiple roles/databases.
+## Postgres max_connections
+
+Max concurrent connections to Postgres. **Default: 100**. Set in `postgresql.conf`, requires restart.
+
+**Formula:** `max_connections ≥ (all PgBouncer pools) + direct connections + 20% buffer`
+
+View: `SHOW max_connections;`
 
 ## Examples
 
-Single database/role:
-```
-default_pool_size = 45
-max_user_connections = 0
-```
+Single database/user: `default_pool_size = 45, max_user_connections = 0`
 
-Multiple roles/databases:
-```
-default_pool_size = 25
-max_user_connections = 150
-```
+Multiple users/databases: `default_pool_size = 25, max_user_connections = 150, postgres max_connections = 200`
 
 ## Monitoring
 
 ```sql
-SELECT datname, usename, COUNT(*) FROM pg_stat_activity 
-WHERE backend_type = 'client backend' GROUP BY datname, usename;
+SELECT datname, usename, COUNT(*) FROM pg_stat_activity WHERE backend_type = 'client backend' GROUP BY datname, usename;
 ```
 
 PgBouncer: `SHOW POOLS;`
