@@ -13,7 +13,9 @@ Server connections per user/database pair. **Default: 20**
 **Multiplication:** 2 users × 3 databases = `6 × default_pool_size` connections  
 **Example:** 45 with 2 users and 3 databases = 270 backend connections
 
-**Values:** OLTP: `20-50`, High concurrency: `50-100`, Memory-intensive: `10-20`
+**Recommended values:**
+- 1 or few database/user pairs OLTP: `25-50`
+- High # of database/user pairs active simultaneously: `10-25`
 
 ## max_user_connections
 
