@@ -23,9 +23,9 @@ Max backend connections per user across all databases. Set in `[users]` section.
 
 ## Postgres max_connections
 
-Max concurrent connections to Postgres. **Default: 100**. Set in `postgresql.conf`, requires restart.
+Max concurrent connections to Postgres. **Default: 100**. Setting requires restart.
 
-**Formula:** `max_connections ≥ (all PgBouncer pools) + direct connections + 20% buffer`
+**Formula:** `max_connections ≥ (all PgBouncer pools) + anticipated steady-state direct connections + 20% buffer`
 
 View: `SHOW max_connections;`
 
