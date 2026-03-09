@@ -1,0 +1,10 @@
+{
+  "tool": "clamav_host_precheck",
+  "repo_path": "/mnt/f/.repo-quarantine/database-skills__20260225T114144Z",
+  "repo_head": "5e01c52c2e5b23ae998a6a7626e00886af864cb5",
+  "gate_phase": "3",
+  "clamav_required": "1",
+  "clamav_script_sha": "21adda48e2c13176fe7c5d0f703667c37ee9622799bf4443f98a07e2c8fab26d",
+  "report_path": "/mnt/f/.repo-quarantine/database-skills__20260225T114144Z/.agent/clamav-host-precheck.json",
+  "generated_at_epoch": 1772019723
+}

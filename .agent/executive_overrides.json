@@ -1,0 +1,14 @@
+{
+  "overrides": [
+    {
+      "override_id": "exec-2026-02-25-toolhive-mcp-config-duplicates",
+      "status": "active",
+      "scope": "finding",
+      "tool": "toolhive",
+      "rule_id": "toolhive/mcp-config/duplicates",
+      "reason": "Known workspace-level duplicate mcp_config outside target repo; non-repo artifact and accepted for this intake.",
+      "approved_by": "operator",
+      "evidence": "/mnt/c/Users/furre/.gemini/.cursor/mcp_config.json"
+    }
+  ]
+}
